@@ -1,0 +1,12 @@
+services:
+  serverbash:
+    image: christense/serverbash:1.0
+    container_name: serverbash
+    ports:
+      - "9999:8888"
+    volumes:
+      - serverbash_data:/opt/ServidorCalamar
+    restart: always
+
+volumes:
+  serverbash_data:

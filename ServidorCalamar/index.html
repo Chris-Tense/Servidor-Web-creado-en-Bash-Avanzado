@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+<head>
+<style>
+    body {
+        font-family: Arial;
+        background: #3e2723;
+        color: #efebe9;
+        text-align: center;
+        margin-top: 100px;
+    }
+    h1 {
+        color: #a1887f;
+    }
+    button {
+        padding: 10px 20px;
+        border: none;
+        background: #6d4c41;
+        color: #ffffff;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    button:hover {
+        background: #5d4037;
+    }
+    #imagen {
+        margin-top: 30px;
+        display: none; /* oculta al inicio */
+    }
+    #imagen img {
+        max-width: 300px;
+    }
+</style>
+</head>
+<body>
+
+<h1>CLUB ATLETICO PLATENSE</h1>
+
+<button onclick="mostrarImagen()">CLICK</button>
+
+<div id="imagen">
+    <img src="imagen.jpeg" alt="Campeón 2025">
+</div>
+
+<script>
+function mostrarImagen() {
+    document.getElementById("imagen").style.display = "block";
+}
+</script>
+
+</body>
+</html>

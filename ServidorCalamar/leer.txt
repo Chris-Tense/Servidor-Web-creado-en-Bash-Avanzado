@@ -1,0 +1,52 @@
+Para añadir en systemd como servicio
+
+-Crear una carpeta en /opt, en este caso llamada serverbash
+sudo mkdir -p /opt/serverbash
+ 
+-Copiar el Codigo del Script en el archivo serverbash.sh o copiarlo directamente
+sudo nano /opt/serverbash/serverbash.sh
+
+-Dar permisos
+sudo chmod +x /opt/serverbash/serverbash.sh
+
+-Crear un archivo en systemd
+sudo nano /etc/systemd/system/serverbash.service
+
+-Contenido en el archivo serverbash.service
+[Unit]
+Description=Servidor Web Bash Educativo
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/serverbash/serverbash.sh
+Restart=always
+RestartSec=3
+User=nobody
+Group=nogroup
+WorkingDirectory=/opt/serverbash
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+-Recargar systemd
+
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+
+-se habilita el arranque al iniciar el sistema
+
+sudo systemctl enable serverbash
+
+-Comandos systemd
+
+sudo systemctl start serverbash
+sudo systemctl stop serverbash
+sudo systemctl restart serverbash
+sudo systemctl status serverbash
+
+-Log en vivo del servicio
+
+journalctl -u serverbash -f
