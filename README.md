@@ -30,11 +30,11 @@ Ideal para entender el funcionamiento interno de un servidor web sin usar framew
 - Preparado para HTTPS (usando Caddy como reverse proxy)
 
 **Estructura**
-.
-├── serverbash.sh     # Script principal
-├── index.html        # Página principal (Conmemorando al CLUB ATLETICO PLATENSE de Argentina, Campeon 2025)
-├── access.log        # Logs de conexiones
-└── tmp/              # Archivos temporales (auto-generados)
+
+- serverbash.sh     # Script principal
+- index.html        # Página principal (Conmemorando al CLUB ATLETICO PLATENSE de Argentina, Campeon 2025)
+- access.log        # Logs de conexiones
+- tmp/              # Archivos temporales (auto-generados)
 
 **Requisitos**
 
