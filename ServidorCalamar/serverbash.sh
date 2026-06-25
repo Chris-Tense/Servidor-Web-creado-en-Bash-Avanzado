@@ -29,26 +29,29 @@
 # -----------------Al ser Educativo va con explicacion----------------------
 #
 # Configuracion Inicial
+
+#trap "" PIPE # Esto evita que Bash muestre: Broken pipe
+
 PUERTO=8888 # El puerto de escucha del Servidor
 IP_SERVIDOR="0.0.0.0" # Escucha en todas las interfaces (LAN, localhost, etc). 
 RAIZ="./" # Carpeta Raiz donde toma el index.html
 
 #Limites de conexiones y Seguridad
-L_TIMEOUT=5 # Tiempo máximo en segundos para leer datos del cliente (anti slowloris)  
+L_TIMEOUT=5 # Tiempo máximo en segundos para leer datos del cliente (anti slowloris) 
 LIMITES_REQUEST=200 # Límite de tiempo entre requests por IP (en milisegundos)
 
 #Manejo de Memoria del Server
 declare -A CACHE # Cache en RAM de archivos (solo texto)
 
 # Funcion de error
-fatal(){ echo "[fatal] $*" >&2; exit 1; } # Muestra error y termina: >&2 → stderr, exit 1 -> corta ejecución 
-
+fatal(){ echo "[fatal] $*" >&2; exit 1; } # Muestra error y termina: >&2 → stderr, exit 1 -> corta ejecución
+ 
 # Funcion mime, devuelve Content-Type según extensión
 mime(){
   case "${1##*.}" in # Extrae extensión del archivo
     html|htm) echo text/html;; # HTML
     jpg|jpeg) echo image/jpeg;; # Todos los demas tipos de archivos
-    png) echo image/png;; 
+    png) echo image/png;;
     css) echo text/css;;
     js) echo text/javascript;;
     json) echo application/json;;
@@ -59,38 +62,37 @@ mime(){
 
 #Logs
 
-
 log(){
   (
     flock -x 200 # flock = herramienta para bloquear archivos
                  # -x = bloqueo exclusivo (solo un proceso puede escribir),200 = descriptor de archivo
-
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1 $2 $3" >> access.log # Genera la linea visual de datos para el access.log
     tail -n 200 access.log > access.tmp # toma las últimas 200 líneas y lo guarda en access.tmp
     mv access.tmp access.log # Reemplaza el log original con el recortado
-
   ) 200>access.lock # Abre (o crea) access.lock, lo asigna al descriptor 200, ese descriptor es el que usa flock
 }
 
-
 # Funcion ruta seguro
+
 ruta_segura(){
   [[ "$1" == *".."* ]] && return 1 # Evita ataques tipo: ../../etc/passwd, Si encuentra .., devuelve error
   return 0
 }
 
 # Función para Respuesta HTTP 429 (rate limit)
+
 enviar_error429(){ # Empieza la funcion
-  BODY="<html> 
+  BODY="<html>
   <head><title>429</title></head>
   <body style='font-family:sans-serif;text-align:center;margin-top:50px;background:#111;color:white;'>
-  <h1 style='color:#ff3b3b;font-size:48px;'>429</h1>
-  <p style='color:#ff3b3b;font-size:22px;'>Deja de spamear</p>
-  <p style='color:#ff3b3b;font-size:22px;'>Refrescar para nuevas conexiones</p>
+  <h1 style='color:#ffd700;font-size:48px;'>429</h1>
+  <p style='color:#ffd700;font-size:22px;'>Deja de spamear</p>
+  <p style='color:#ffd700;font-size:22px;'>Refrescar para nuevas conexiones</p>
   </body>
   </html>"
 
   LONGITUD=${#BODY} # tamaño exacto del contenido, para que el navegador no falle 
+
   printf "HTTP/1.1 429 Too Many Requests\r\n"
   printf "Content-Type: text/html\r\n"
   printf "Content-Length: %d\r\n" "$LONGITUD"
@@ -98,111 +100,185 @@ enviar_error429(){ # Empieza la funcion
   printf "%s" "$BODY"
 }
 
-# Función principal de manejo de requests
-Gestion(){ # Maneja cada conexión
-  local ip="${SOCAT_PEERADDR:-0.0.0.0}" # IP real cliente
-  
-  IFS=$'\r' read -r -t "$L_TIMEOUT" request || return # Lee la primera línea del request HTTP (GET /index.html HTTP/1.1)
+# Función para Respuesta HTTP 404
 
-  request=${request%$'\n'}
-  read method ruta version <<< "$request" # Divide en: (method -> GET)(ruta -> /index.html)(version -> HTTP/1.1)
+enviar_error404(){ # Empieza la funcion
+  BODY="<html>
+  <head><title>404</title></head>
+  <body style='font-family:sans-serif;text-align:center;margin-top:50px;background:#111;color:white;'>
+  <h1 style='color:#ff3b3b;font-size:48px;'>404</h1>
+  <p style='color:#ff3b3b;font-size:22px;'>No encontrado</p>
+  <p style='color:#ff3b3b;font-size:22px;'>El recurso no existe</p>
+  </body>
+  </html>"
 
-  local ahora=$(date +%s%3N) # El ahora (Tiempo actual) es en milisegundos
+  LONGITUD=${#BODY} # tamaño exacto del contenido, para que el navegador no falle 
 
-# RATE LIMIT con archivo compartido + flock
-# Detectar extensión antes de limitar
-ruta=${ruta%%\?*} # Elimina parámetros ?a=1
-ruta=${ruta#/} # Quita / inicial
-ext="${ruta##*.}" # Extrae extensión
-# NO limitar archivos estáticos
-   if [[ ! "$ext" =~ ^(jpg|jpeg|png|css|js|ico)$ ]]; then # No limita archivos estáticos
-    # Control con archivo
-    local archivo="./tmp/bashserver_$ip" # Archivo donde se guarda los datos
-    local ahora=$(date +%s%3N) # Tiempo
+  printf "HTTP/1.1 404 Not Found\r\n"
+  printf "Content-Type: text/html\r\n"
+  printf "Content-Length: %d\r\n" "$LONGITUD"
+  printf "Connection: close\r\n\r\n"
+  printf "%s" "$BODY"
+}
 
-    (
-        flock -n 200 || exit 1 # Bloqueo para evitar concurrencia
+# Seguridad de rutas completa
 
-        if [[ -f "$archivo" ]]; then
-          # Calcula tiempo entre requests
-          ultima=$(cut -d '|' -f2 "$archivo")
-          diff=$((ahora - ultima))
-          # Si es muy rápido -> bloquea (Error 429)
-          if (( diff < LIMITES_REQUEST )); then
-            enviar_error429
-            exit 0
-          fi
-        fi
+seguridad_ruta() {
+  ruta_segura "$1" || return 1 # Usa la función anterior
+  full_ruta="$RAIZ/$1" # Evita que se escape del directorio raíz
+  [[ "$full_ruta" != "$RAIZ/"* ]] && return 1
+  return 0
+}
 
-        echo "Esta IP esta ahora $(date '+%Y-%m-%d %H:%M:%S') hace (Milisegundos)|$ahora" > "$archivo" # Guarda timestamp actual
+# Métodos HTTP
 
-      ) 200>"$archivo.lock" || return # Abre (o crea) access.lock, lo asigna al descriptor 200, ese descriptor es el que usa flock
+manejar_get() { # inicia la funcion GET
+  local ruta="$1"
+  ruta=${ruta#/}
+  ruta=${ruta:-index.html} # Si está vacío -> sirve index.html
 
-    fi
-
-  # Lee headers HTTP hasta línea vacía
-  while IFS=$'\r' read -r -t "$L_TIMEOUT" line; do
-    line=${line%$'\n'}
-    [[ -z "$line" ]] && break # Lee hasta línea vacía (fin de headers)
-  done
-
-  # Si no es GET → responde 405
-  [[ $method != GET ]] && { 
-    printf "HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n"
+  seguridad_ruta "$ruta" || { # Llama a la funcion seguridad_ruta
+    printf "HTTP/1.1 403 Forbidden\r\n\r\n"
     return
   }
 
-  ruta=${ruta%%\?*} # Quita query string (?a=1)
-  ruta=${ruta#/} # Quita / inicial
-  ruta=${ruta:-} # Si ruta no está definida o está vacía, lo deja como string vacío
+  full_ruta="$RAIZ/$ruta"
 
-  # Validación de seguridad
-  ruta_segura "$ruta" || {
-    printf "HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n"
-    return
-  }
-
-  full_ruta="$RAIZ/$ruta" # Determina el archivo
-log "$ip" "$method" "/$ruta" # Log de los datos
-  if [[ -f "$full_ruta" ]]; then # Si el archivo existe
-    ext="${full_ruta##*.}" # Guarda en ext todo lo que esta despues del ultimo punto (.).
-# Cache
-    if [[ "$ext" =~ ^(html|css|js|txt)$ ]]; then # Si la extension (ext) es html, css, js o txt
-      [[ -z "${CACHE[$full_ruta]}" ]] && CACHE[$full_ruta]=$(cat "$full_ruta") # Si el archivo no está en cache, leerlo y guardar
-    fi
-    # Respuesta HTTP
+  if [[ -f "$full_ruta" ]]; then # Verifica que el archivo exista
     printf "HTTP/1.1 200 OK\r\n"
     printf "Content-Type: %s\r\n" "$(mime "$full_ruta")"
-    printf "Content-Length: %s\r\n" "$(stat -c%s "$full_ruta")"
-    printf "Connection: close\r\n"
-    printf "Server: BashServer\r\n\r\n"
-
-    if [[ -n "${CACHE[$full_ruta]}" ]]; then # Si está cacheado -> lo usa
-      printf "%s" "${CACHE[$full_ruta]}"
-    else
-      cat "$full_ruta" # Si no -> lo lee del disco
-    fi
-
-    return
-  fi
-
-  index="$RAIZ/index.html" # Intenta devolver index
-
-  if [[ -f "$index" ]]; then
-    printf "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n" # El index existe (status 200)
-    cat "$index"
+    printf "Content-Length: %s\r\n\r\n" "$(stat -c%s "$full_ruta")"
+    cat "$full_ruta" 2>/dev/null # Lo devuelve
   else
-    printf "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\nNot Found" # index no existe (status 404)
+    enviar_error404 # Si no recibe nada da 404
   fi
 }
 
-# Modo handler
-if [[ "$1" == "handler" ]]; then # Detecta si el script fue llamado en modo "handler"
-  Gestion                        # Ejecuta Gestion
+manejar_post() { # inicia la funcion POST
+  local ruta="$1"
+  ruta=${ruta#/}
+
+  seguridad_ruta "$ruta" || return # Llama a la funcion seguridad_ruta
+
+  echo "$body" > "$RAIZ/$ruta" # Crea archivo con el contenido recibido http://ip/nuevoarchivo
+
+  printf "HTTP/1.1 201 Created\r\n\r\nOK" # Envia OK cuando lo crea
+}
+
+manejar_put() { # inicia la funcion PUT
+  local ruta="$1"
+  ruta=${ruta#/}
+
+  seguridad_ruta "$ruta" || return # Llama a la funcion seguridad_ruta
+
+  echo "$body" > "$RAIZ/$ruta"
+
+  printf "HTTP/1.1 200 OK\r\n\r\nOK" # Envia OK cuando hace el POST
+}
+
+manejar_patch() { # inicia la funcion PATCH
+  local ruta="$1"
+  ruta=${ruta#/}
+
+  seguridad_ruta "$ruta" || return # Llama a la funcion seguridad_ruta
+
+  if [[ -f "$RAIZ/$ruta" ]]; then
+    echo "$body" >> "$RAIZ/$ruta" # Agrega contenido
+    printf "HTTP/1.1 200 OK\r\n\r\nOK" # Envia OK cundo agrega contenido
+  else
+    enviar_error404 # Si no recibe nada da 404
+  fi
+}
+
+manejar_delete() { # inicia la funcion DELETE
+  local ruta="$1"
+  ruta=${ruta#/}
+
+  seguridad_ruta "$ruta" || return # Llama a la funcion seguridad_ruta
+
+  if [[ -f "$RAIZ/$ruta" ]]; then
+    rm -f "$RAIZ/$ruta"
+    printf "HTTP/1.1 200 OK\r\n\r\nOK" # Envia OK cuando elimina
+  else
+    enviar_error404 # Si no recibe nada da 404
+  fi
+}
+
+# Función principal de manejo de requests
+
+Gestion(){
+  local ip="${SOCAT_PEERADDR:-0.0.0.0}" # IP real cliente
+
+  IFS=$'\r' read -r -t "$L_TIMEOUT" request || return # Lee la primera línea del request HTTP (GET /index.html HTTP/1.1)
+  request=${request%$'\n'}
+
+  read method ruta version <<< "$request" # Divide en: (method -> GET)(ruta -> /index.html)(version -> HTTP/1.1)
+  
+  local ahora=$(date +%s%3N) # El ahora (Tiempo actual) es en milisegundos ## agregado
+
+  # RATE LIMIT con archivo compartido + flock
+  # Detectar extensión antes de limitar
+
+  ruta=${ruta%%\?*} # Elimina parámetros ?a=1
+  ruta=${ruta#/} # Quita / inicial ## agregado
+  ext="${ruta##*.}" # Extrae extensión ## agregado
+  # NO limitar archivos estáticos
+  ext="${ruta##*.}"
+  if [[ ! "$ext" =~ ^(jpg|jpeg|png|css|js|ico)$ ]]; then # No limita archivos estáticos
+    archivo="./tmp/bashserver_$ip" # Archivo donde se guarda los datos
+    ahora=$(date +%s%3N) # Tiempo
+
+    (
+      flock -n 200 || exit 1 # Bloqueo para evitar concurrencia
+
+      if [[ -f "$archivo" ]]; then
+        # Calcula tiempo entre requests
+        ultima=$(cut -d '|' -f2 "$archivo")
+        diff=$((ahora - ultima))
+        # Si es muy rápido -> bloquea (Error 429)
+        if (( diff < LIMITES_REQUEST )); then
+            enviar_error429
+            exit 0
+        fi
+
+      fi
+
+      echo "Esta IP esta ahora $(date '+%Y-%m-%d %H:%M:%S') hace (Milisegundos)|$ahora" > "$archivo" # Guarda timestamp actual
+
+      ) 200>"$archivo.lock" || return # Abre (o crea) access.lock, lo asigna al descriptor 200, ese descriptor es el que usa flock
+  fi
+
+  # HEADERS
+  content_length=0
+  while IFS=$'\r' read -r -t "$L_TIMEOUT" line; do
+    line=${line%$'\n'}
+    [[ -z "$line" ]] && break
+    [[ "$line" == Content-Length:* ]] && content_length=$(echo "$line" | awk '{print $2}')
+  done
+
+  # BODY
+  body=""
+  (( content_length > 0 )) && IFS= read -r -n "$content_length" body
+
+  log "$ip" "$method" "$ruta"
+
+  case "$method" in
+    GET) manejar_get "$ruta" ;;
+    POST) manejar_post "$ruta" ;;
+    PUT) manejar_put "$ruta" ;;
+    PATCH) manejar_patch "$ruta" ;;
+    DELETE) manejar_delete "$ruta" ;;
+    *) printf "HTTP/1.1 405 Method Not Allowed\r\n\r\n" ;;
+  esac
+}
+
+# ================== MAIN ==================
+
+if [[ "$1" == "handler" ]]; then
+  Gestion
   exit 0
 fi
 
-# Funcion Principal
 main(){
   # Limpiar archivos temporales al iniciar
   rm -f ./tmp/bashserver_* ./tmp/bashserver_*.lock 2>/dev/null
