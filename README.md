@@ -7,14 +7,7 @@ Servidor HTTP minimalista desarrollado completamente en Bash con fines educativo
 **Descripción**
 
 Este proyecto implementa un servidor web funcional usando Bash + socat, diseñado para aprender cómo funciona HTTP desde cero.
-Permite servir archivos estáticos (HTML, CSS, JS, imágenes, etc.) manejando:
-
-- Requests HTTP básicas (GET)
-- Manejo de conexiones concurrentes
-- Seguridad básica
-- Rate limiting
-- Cache en memoria
-- Logging simple
+Permite servir archivos estáticos (HTML, CSS, JS, imágenes, etc.) 
 
 Ideal para entender el funcionamiento interno de un servidor web sin usar frameworks o lenguajes complejos.
 
@@ -28,12 +21,7 @@ Ideal para entender el funcionamiento interno de un servidor web sin usar framew
 - Logs de acceso (access.log)
 - Soporte para archivos estáticos
 - Preparado para HTTPS (usando Caddy como reverse proxy)
-- Soporte para múltiples métodos HTTP:
--- GET → Obtener archivos
--- POST → Crear archivos
--- PUT → Reemplazar archivos
--- PATCH → Modificar (append) archivos
--- DELETE → Eliminar archivos
+- Soporte para múltiples métodos HTTP (GET,POST,PUT,PATCH,DELETE)
 
 **Estructura**
 
