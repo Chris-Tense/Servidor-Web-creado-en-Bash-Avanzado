@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dominio 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #5a3e2b; /* ✅ marrón */
+      color: white;        /* ✅ letras blancas */
+      text-align: center;
+    }
+
+    header {
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin: 0;
+    }
+
+    p {
+      font-size: 1.2em;
+    }
+
+    .btn {
+      background: white;
+      color: #5a3e2b;
+      padding: 12px 25px;
+      border-radius: 25px;
+      font-weight: bold;
+      display: inline-block;
+      margin-top: 20px;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #3d2a1e;
+      color: white;
+    }
+
+    img {
+      margin: 30px auto;
+      max-width: 90%;
+      display: none;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+
+    footer {
+      margin-top: 50px;
+      padding: 15px;
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Dominio 1 - Platense Campeon!!</h1>
+    <p>PLATENSE CAMPEON 2025</p>
+
+    <div class="btn" onclick="mostrarImagen()">
+      CLICK
+    </div>
+
+    <img id="imagen" src="platense-campeon.jpeg" alt="Platense campeón">
+  </header>
+
+  <footer>
+    © CLUB ATLETICO PLATENSE - ARGENTINA
+  </footer>
+
+  <script>
+    function mostrarImagen() {
+      document.getElementById("imagen").style.display = "block";
+    }
+  </script>
+
+</body>
+</html>

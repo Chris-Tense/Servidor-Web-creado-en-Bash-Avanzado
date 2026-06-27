@@ -36,6 +36,13 @@ PUERTO=8888 # El puerto de escucha del Servidor
 IP_SERVIDOR="0.0.0.0" # Escucha en todas las interfaces (LAN, localhost, etc). 
 RAIZ="./" # Carpeta Raiz donde toma el index.html
 
+# MULTIDOMINIO
+declare -A DOMINIOS
+DOMINIOS["localhost"]="./" # Dominio por defecto http://ip-o-localhost:8888
+DOMINIOS["dominio1.com"]="./dominio1/" # Dominio 1 http://dominio1.com:8888
+DOMINIOS["dominio2.com"]="./dominio2/" # Dominio 2 http://dominio2.com:8888
+DOMINIOS["default"]="./" # Dominio por defecto (localhost http://ip-o-localhost:8888)
+
 #Limites de conexiones y Seguridad
 L_TIMEOUT=5 # Tiempo máximo en segundos para leer datos del cliente (anti slowloris) 
 LIMITES_REQUEST=200 # Límite de tiempo entre requests por IP (en milisegundos)
@@ -248,38 +255,69 @@ Gestion(){
       ) 200>"$archivo.lock" || return # Abre (o crea) access.lock, lo asigna al descriptor 200, ese descriptor es el que usa flock
   fi
 
-  # HEADERS
-  content_length=0
-  while IFS=$'\r' read -r -t "$L_TIMEOUT" line; do
-    line=${line%$'\n'}
-    [[ -z "$line" ]] && break
-    [[ "$line" == Content-Length:* ]] && content_length=$(echo "$line" | awk '{print $2}')
+# Inicia el bloque de Multidomino
+  host="default" # Variable host -> dominio (por defecto)
+  content_length=0 # Tamaño delo body (para POST/PUT)
+
+  while read -r -t "$L_TIMEOUT" line; do # Lee línea por línea del request HTTP, Ejemplo:
+                                         # GET / HTTP/1.1
+                                         # Host: dominio1.com
+                                         # User-Agent: curl
+    line="${line%%$'\r'}" # Limpia \r (porque HTTP usa \r\n)
+    [[ -z "$line" ]] && break # Cuando encuentra línea vacía → termina headers
+
+    case "$line" in # Analiza cada header
+      Host:*) # Extrae el dominio
+        host="${line#Host: }"
+        host="${host%%:*}"
+      ;;
+      Content-Length:*)
+        content_length="${line#Content-Length: }" # Guarda el tamaño del body (POST, PUT, etc.)
+      ;;
+    esac
   done
 
   # BODY
-  body=""
-  (( content_length > 0 )) && IFS= read -r -n "$content_length" body
+  body=""                                                            # Si hay contenido: 
+  (( content_length > 0 )) && IFS= read -r -n "$content_length" body # Lee byte y lo guarda en el body
 
   log "$ip" "$method" "$ruta"
+  # Normalizar host
+  host=$(echo "$host" | tr '[:upper:]' '[:lower:]') # Convierte a minúsculas: DOMINIO1.COM -> dominio1.com
+  host=${host//[^a-z0-9\.\-]/} # Limpia caracteres raros: evita ataques, solo permite letras y numeros
 
-  case "$method" in
-    GET) manejar_get "$ruta" ;;
-    POST) manejar_post "$ruta" ;;
-    PUT) manejar_put "$ruta" ;;
-    PATCH) manejar_patch "$ruta" ;;
-    DELETE) manejar_delete "$ruta" ;;
-    *) printf "HTTP/1.1 405 Method Not Allowed\r\n\r\n" ;;
+  # MULTIDOMINIO
+  RAIZ="${DOMINIOS[$host]}" # Busca el dominio en el array: dominio1.com -> :/dominio!
+  [[ -z "$RAIZ" ]] && RAIZ="${DOMINIOS["default"]}" # Si no existe → usa default (./)
+
+# DEBUG
+  echo "DEBUG host=$host raiz=$RAIZ ruta=$ruta" >&2 # Muestra internamente: dominio, carpeta usada, ruta pedida
+
+  log "$ip" "$method" "$host $ruta" #  Guarda registro en access.log: FECHA HORA IP GET dominio1.com index.html
+
+  case "$method" in #  Decide qué hacer según método
+    GET) manejar_get "$ruta" ;; #  Sirve archivos (index.html, css, etc)
+    *) printf "HTTP/1.1 405 Method Not Allowed\r\n\r\n" ;; # Métodos no soportados -> error 405
   esac
+
+  case "$method" in # evaluación del valor de la variable $method
+    GET) manejar_get "$ruta" ;; # llama a la función manejar_get (devolver archivos (HTML, CSS, etc))
+    POST) manejar_post "$ruta" ;; # llama a la funcion manejar_post (guarda datos en un archivo)
+    PUT) manejar_put "$ruta" ;; # llama a la funcion manejar_put (sobrescribe archivo completo)
+    PATCH) manejar_patch "$ruta" ;; # llama a la funcion manejar_patch (agrega contenido al archivo (>>))
+    DELETE) manejar_delete "$ruta" ;; # llama a la funcion manejar_delete (Borra el archivo)
+    *) printf "HTTP/1.1 405 Method Not Allowed\r\n\r\n" ;; # Si el método NO es ninguno de los anteriores: responde 405
+  esac
+
 }
 
-# ================== MAIN ==================
-
-if [[ "$1" == "handler" ]]; then
-  Gestion
-  exit 0
+if [[ "$1" == "handler" ]]; then # Verifica si el script ($1) es ejecutado en modo handler
+  Gestion # Si se cumple, ejecuta la función principal que procesa requests HTTP
+  exit 0 # 0 = ejecución exitosa
 fi
 
-main(){
+# Funcion principal (parametros para ejecutar el servidor web)
+funcion_principal(){
   # Limpiar archivos temporales al iniciar
   rm -f ./tmp/bashserver_* ./tmp/bashserver_*.lock 2>/dev/null
   set +m
@@ -339,4 +377,4 @@ wait # mantiene el script activo,espera que procesos hijos sigan vivos y evita q
 
 }
 
-main # Inicia servidor
+funcion_principal # Inicia servidor

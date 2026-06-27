@@ -1,51 +1,91 @@
 <!DOCTYPE html>
-<meta charset="UTF-8">
-<html>
+<html lang="es">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Platense Campeón</title>
+
 <style>
-    body {
-        font-family: Arial;
-        background: #3e2723;
-        color: #efebe9;
-        text-align: center;
-        margin-top: 100px;
-    }
-    h1 {
-        color: #a1887f;
-    }
-    button {
-        padding: 10px 20px;
-        border: none;
-        background: #6d4c41;
-        color: #ffffff;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-    button:hover {
-        background: #5d4037;
-    }
-    #imagen {
-        margin-top: 30px;
-        display: none; /* oculta al inicio */
-    }
-    #imagen img {
-        max-width: 300px;
-    }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(180deg, #ffffff, #d7ccc8); /* ✅ blanco + marrón claro */
+    color: #3e2723; /* ✅ marrón oscuro */
+    text-align: center;
+  }
+
+  h1 {
+    margin-top: 80px;
+    font-size: 3em;
+    font-weight: bold; /* ✅ bien negrita */
+  }
+
+  .sub {
+    font-size: 1.4em;
+    margin-top: 10px;
+    font-weight: bold; /* ✅ negrita */
+    color: #4e342e;
+  }
+
+  button {
+    margin-top: 30px;
+    padding: 14px 30px;
+    border: none;
+    background: #3e2723;
+    color: #fff;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: #5d4037;
+    transform: scale(1.05);
+  }
+
+  #imagen {
+    display: none;
+    margin-top: 40px;
+  }
+
+  #imagen img {
+    max-width: 90%;
+    border-radius: 15px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+  }
+
+  footer {
+    margin-top: 50px;
+    padding: 20px;
+    background: #3e2723;
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: bold;
+  }
 </style>
 </head>
+
 <body>
 
 <h1>CLUB ATLETICO PLATENSE</h1>
+<div class="sub">CAMPEÓN ARGENTINO 2025 🏆</div>
 
-<button onclick="mostrarImagen()">CLICK</button>
+<button onclick="mostrarImagen()">LA COPA!!!</button>
 
 <div id="imagen">
-    <img src="imagen.jpeg" alt="Campeón 2025">
+  <img src="imagen.jpeg" alt="Campeón">
 </div>
+
+<footer>
+  © Platense - Argentina
+</footer>
 
 <script>
 function mostrarImagen() {
-    document.getElementById("imagen").style.display = "block";
+  document.getElementById("imagen").style.display = "block";
 }
 </script>
 

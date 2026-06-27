@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dominio 2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #5a3e2b; /* ✅ marrón */
+      color: white;        /* ✅ letras blancas */
+    }
+
+    header {
+      background: #4a3324;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      color: white;
+    }
+
+    .container {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .card {
+      background: #6b4a34;
+      padding: 30px;
+      border-radius: 15px;
+      display: inline-block;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+      max-width: 400px;
+    }
+
+    .card h2 {
+      color: white;
+    }
+
+    .btn {
+      background: white;
+      color: #5a3e2b;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: inline-block;
+      margin-top: 15px;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #3d2a1e;
+      color: white;
+    }
+
+    img {
+      display: none;
+      margin: 30px auto; /* ✅ centra la imagen */
+      max-width: 90%;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 0.8em;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Dominio 2 - Platense Campeon!!</h1>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>PLATENSE CAMPEON 2025</h2>
+
+      <div class="btn" onclick="mostrarImagen()">
+        Ver imagen
+      </div>
+
+      <img id="imagen" src="platense-campeon.jpeg" alt="Platense campeón">
+    </div>
+  </div>
+
+  <footer>
+    © CLUB ATLETICO PLATENSE - ARGENTINA
+  </footer>
+
+  <script>
+    function mostrarImagen() {
+      document.getElementById("imagen").style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
+
