@@ -59,11 +59,11 @@ Probar Multidominios
   Ejemplo: Si mi ip es 192.168.0.14, configurar el archivo hosts de esta forma:
   sudo nano /etc/hosts
    - agregar:
-      -192.168.0.14  dominio1.com
+      - 192.168.0.14  dominio1.com
       - 192.168.0.14  dominio2.com
 - Despues de configurar el archivos hosts, navegar por los dominios
-   -http://dominio1.com:8888
-   -http://dominio2.com:8888  
+   - http://dominio1.com:8888
+   - http://dominio2.com:8888  
 
 **Uso con Docker**
 
