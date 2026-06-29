@@ -2,7 +2,8 @@
 
 **CLUB ATLÉTICO PLATENSE CAMPEÓN 2025!!**
 
-Servidor HTTP minimalista desarrollado completamente en Bash con fines educativos. Conmemorando el campeonato de futbol Argentino del 2025, en el cual fue Campeon el CLUB ATLETICO PLATENSE!!!
+Servidor HTTP minimalista desarrollado completamente en Bash con fines educativos.
+Un Proyecto para recordar la campaña y consagración del CLUB ATLETICO PLATENSE en el Torneo Apertura 2025 de la Asociación del Fútbol Argentino.
 
 **Descripción**
 
